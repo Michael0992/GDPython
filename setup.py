@@ -15,7 +15,7 @@ setup(
     description="GDPython ist eine QT6/Python basierte Game Engine für die einfache Erstellung von 2D-Spielen.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/deinusername/gdpython",
+    url="https://github.com/Michael0992/GDPython",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
