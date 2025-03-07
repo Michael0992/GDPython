@@ -1,4 +1,3 @@
-import gdpython
 import random
 from gdpython import *
 
