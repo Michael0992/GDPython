@@ -8,7 +8,6 @@ setup(
         "PyQt6==6.8.1",
         "PyQt6-Qt6==6.8.2",
         "PyQt6_sip==13.10.0",
-        "pygame"
     ],
     author="Michael Lutz",
     author_email="michel.lutz92@gmail.com",
