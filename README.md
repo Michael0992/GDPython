@@ -6,13 +6,14 @@ Sie unterstützt Sprites, Animationen, Szenenhandling, Multi-Layer, Textdarstell
 Kollisionserkennung sowie Soundeffekte und Musik.
 
 Für mehr Infos über die nutzung von GDPython siehe **doku.md**
-Installation
+
+#### Installation
 
 ```pip install gdpython```
 
 #### Erstellung eines neuen Spiels
 
-Um ein neues Spiel zu erstellen reicht es die vorlage von void_game_file.py zu nutzen. Der Aufbau einer Spieldatei sollte immer so aussehen:
+Um ein neues Spiel zu erstellen reicht es die Vorlage von void_game_file.py zu nutzen. Der Aufbau einer Spieldatei sollte immer so aussehen:
 
 ```python
 
