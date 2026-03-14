@@ -1,102 +1,106 @@
-from PyQt6.QtWidgets import QMainWindow  , QWidget
+from PyQt6.QtWidgets import QMainWindow, QWidget
 from PyQt6.QtGui import QPainter, QColor, QTransform
-from PyQt6.QtCore import  QObject, pyqtSignal, Qt, QUrl, QElapsedTimer
+from PyQt6.QtCore import QObject, pyqtSignal, Qt, QUrl, QElapsedTimer
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from .objects import Layer, Camera, Sprite, Text
 
 
 class Scene(QObject):
 
-    sceneUpdated = pyqtSignal()
-    MouseX = 0
-    MouseY = 0
+    scene_updated = pyqtSignal()
+    mouse_x = 0
+    mouse_y = 0
 
-    def __init__(self, name:str  , sizeX:int = 800, sizeY:int = 800, background:str = "#000000" ):
-        """Scene erlaubt es uns verschiedene Szenen zu erstellen die zur verwaltung von Layern dienen und es ermöglichen Spiel-Level
-        zb. zu erstellen."""
+    def __init__(self, name:str, size_x:int = 800, size_y:int = 800, background:str = "#000000"):
+        """Erlaubt es, verschiedene Szenen zu erstellen, die zur Verwaltung von Layern dienen
+        und es ermöglichen, Spiel-Level zu erstellen."""
         super().__init__()
         self.name = name
-        self.sizeX = sizeX
-        self.sizeY = sizeY
+        self.size_x = size_x
+        self.size_y = size_y
         self.background = background
         self.layers = []
         self.cameras = []
-        self.defaultLayer = Layer("DefaultLayer", 0 , 0 , 0)
-        self.defaultCamera = Camera("DefaultCamera", 0, 0, scene_width = self.sizeX, scene_height = self.sizeY, layer=self.defaultLayer)
-        self.keyPressed = set()
-        self.activeCameraIndex = 0
+        self.default_layer = Layer("DefaultLayer", 0, 0, 0)
+        self.default_camera = Camera("DefaultCamera", 0, 0, scene_width=self.size_x, scene_height=self.size_y, layer=self.default_layer)
+        self.key_pressed = set()
+        self.active_camera_index = 0
 
-        self.addLayer(self.defaultLayer)
-        self.addCamera(self.defaultCamera)
-        
-    def updateScene(self):
-        """Sendet ein Signal, um die Szene zu aktualisieren"""
-        activCam = self.getActiveCamera()
-        if activCam and activCam.layer:
-            activCam.layer.posX = -activCam.posX + activCam.width/2
-            activCam.layer.posY = -activCam.posY + activCam.height/2
+        self.add_layer(self.default_layer)
+        self.add_camera(self.default_camera)
 
-        self.sceneUpdated.emit()
+    def update_scene(self):
+        """Sendet ein Signal, um die Szene zu aktualisieren."""
+        active_cam = self.get_active_camera()
+        if active_cam and active_cam.layer:
+            active_cam.layer.pos_x = -active_cam.pos_x + active_cam.width / 2
+            active_cam.layer.pos_y = -active_cam.pos_y + active_cam.height / 2
 
-    def setBackground(self, newColor:str):
-        """Setzt die Hintergrundfarbe und sendet ein Signal"""
-        self.background = newColor
-        self.updateScene()
+        self.scene_updated.emit()
 
-    def isKeyPressed(self , key):
-        """Überprüft ob eine bestimmte Taste gedrückt wird"""
-        return key.lower() in self.keyPressed
-    
-    def addCamera(self, camera):
-        """Fügt eine Kamera zur Szene hinzu"""
+    def set_background(self, new_color:str):
+        """Setzt die Hintergrundfarbe und sendet ein Signal."""
+        self.background = new_color
+        self.update_scene()
+
+    def is_key_pressed(self, key):
+        """Überprüft, ob eine bestimmte Taste gedrückt wird."""
+        return key.lower() in self.key_pressed
+
+    def add_camera(self, camera):
+        """Fügt eine Kamera zur Szene hinzu."""
         self.cameras.append(camera)
-        self.updateScene()
+        self.update_scene()
 
-    def getActiveCamera(self):
-        """Gibt die aktive Kamera zurück"""
+    def get_active_camera(self):
+        """Gibt die aktive Kamera zurück."""
         if self.cameras:
-            return self.cameras[self.activeCameraIndex]
-        else: return None
-    def setActiveCamera(self, index):
-        """Wechselt zur Kamera mit dem gegebenen Index"""
-        if 0 <= index < len(self.cameras):
-            self.activeCameraIndex = index
-            self.updateScene()
+            return self.cameras[self.active_camera_index]
+        else:
+            return None
 
-    def addLayer(self, layer):
-        """Fügt einer Szene einen Layer hinzu"""
+    def set_active_camera(self, index):
+        """Wechselt zur Kamera mit dem gegebenen Index."""
+        if 0 <= index < len(self.cameras):
+            self.active_camera_index = index
+            self.update_scene()
+
+    def add_layer(self, layer):
+        """Fügt einer Szene einen Layer hinzu."""
         layer.scene = self
         self.layers.append(layer)
         self.layers.sort(key=lambda l: l.z_index)
-        self.updateScene()
+        self.update_scene()
 
-    def getObjectByName(self, name:str):
-        """Durchsucht alle Layer nach einem Objekt mit dem gegebenen Namen"""
+    def get_object_by_name(self, name:str):
+        """Durchsucht alle Layer nach einem Objekt mit dem gegebenen Namen."""
         for layer in self.layers:
-            obj = layer.getObjectByName(name)
+            obj = layer.get_object_by_name(name)
             if obj:
                 return obj
         return None
 
+
 class InputHandler(QObject):
-    """Steuert die Tastatureingaben und speichert gedrückte Tasten"""
+    """Steuert die Tastatureingaben und speichert gedrückte Tasten."""
     def __init__(self, scene):
         super().__init__()
         self.scene:Scene = scene
 
-    def keyPressEvent(self, event):
-        """Wird aufgerufen wenn eine Taste gedrückt wird."""
-        key = self.keyToString(event.key())
+    def key_press_event(self, event):
+        """Wird aufgerufen, wenn eine Taste gedrückt wird."""
+        key = self.key_to_string(event.key())
         if key:
-            self.scene.keyPressed.add(key)
+            self.scene.key_pressed.add(key)
 
-    def keyReleaseEvent(self, event):
-        key = self.keyToString(event.key())
-        if key and key in self.scene.keyPressed:
-            self.scene.keyPressed.remove(key)
+    def key_release_event(self, event):
+        """Wird aufgerufen, wenn eine Taste losgelassen wird."""
+        key = self.key_to_string(event.key())
+        if key and key in self.scene.key_pressed:
+            self.scene.key_pressed.remove(key)
 
-    def keyToString(self, qtkey):
-        """umwandeln von QT-Tasten in String form für spätere Abfragen"""
+    def key_to_string(self, qtkey):
+        """Wandelt Qt-Tasten in String-Form für spätere Abfragen um."""
         key_map = {
             Qt.Key.Key_W: "w",
             Qt.Key.Key_A: "a",
@@ -106,126 +110,136 @@ class InputHandler(QObject):
         }
         return key_map.get(qtkey, None)
 
+
 class RenderManager(QMainWindow):
-    def __init__(self, scene:Scene, inputHandler:InputHandler):
+    """Verwaltet das Hauptfenster und leitet Eingaben weiter."""
+    def __init__(self, scene:Scene, input_handler:InputHandler):
         super().__init__()
         self.scene = scene
-        self.inputHandler = inputHandler
-        self.sizeX = scene.sizeX
-        self.sizeY = scene.sizeY
-        self.initWindows()
-    
-    def initWindows(self):
+        self.input_handler = input_handler
+        self.size_x = scene.size_x
+        self.size_y = scene.size_y
+        self.init_windows()
+
+    def init_windows(self):
+        """Initialisiert das Fenster und die Zeichenfläche."""
         self.setWindowTitle("New Game")
-        self.setGeometry(0,0, self.sizeX, self.sizeY)
+        self.setGeometry(0, 0, self.size_x, self.size_y)
         self.canvas = Canvas(self.scene)
         self.setCentralWidget(self.canvas)
         self.show()
 
     def keyPressEvent(self, event):
-        """Leitet Tastatureingabe an den inputHandler weiter"""
-        self.inputHandler.keyPressEvent(event)
+        """Leitet Tastendruck an den InputHandler weiter."""
+        self.input_handler.key_press_event(event)
 
     def keyReleaseEvent(self, event):
-        """Leitet Tastatureingabe an den inputHandler weiter"""
-        self.inputHandler.keyReleaseEvent(event)
+        """Leitet Tastenloslassen an den InputHandler weiter."""
+        self.input_handler.key_release_event(event)
 
-    def changeScene(self, newScene:"Scene"):
-        """Wechsel zu einer neuen Szene"""
-        self.scene.sceneUpdated.disconnect(self.canvas.update)
-        self.scene = newScene
-        self.canvas.scene = newScene
-        newScene.sceneUpdated.connect(self.canvas.update)
+    def change_scene(self, new_scene:"Scene"):
+        """Wechselt zu einer neuen Szene."""
+        self.scene.scene_updated.disconnect(self.canvas.update)
+        self.scene = new_scene
+        self.canvas.scene = new_scene
+        new_scene.scene_updated.connect(self.canvas.update)
         self.canvas.update()
 
+
 class Canvas(QWidget):
-    """Zeichenfläche für die Szene"""
+    """Zeichenfläche für die Szene."""
     def __init__(self, scene:Scene):
         super().__init__()
         self.scene:Scene = scene
-        self.scene.sceneUpdated.connect(self.update)
+        self.scene.scene_updated.connect(self.update)
         self.setMouseTracking(True)
 
     def mouseMoveEvent(self, event):
-        """Speichert die aktuelle Mausposition in der Szene"""
-        self.scene.MouseX = event.position().x()
-        self.scene.MouseY = event.position().y()
+        """Speichert die aktuelle Mausposition in der Szene."""
+        self.scene.mouse_x = event.position().x()
+        self.scene.mouse_y = event.position().y()
 
-
-    def paintEvent(self,event):
+    def paintEvent(self, event):
+        """Zeichnet alle Layer und Objekte der Szene."""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(self.scene.background))
 
         for layer in sorted(self.scene.layers, key=lambda l: l.z_index):
             painter.save()
             transform = QTransform()
-            transform.translate(layer.posX, layer.posY)
+            transform.translate(layer.pos_x, layer.pos_y)
             transform.rotate(layer.rotation)
             painter.setTransform(transform)
-            for obj in sorted(layer.objects, key= lambda x: x.z_index):
+            for obj in sorted(layer.objects, key=lambda x: x.z_index):
                 if isinstance(obj, Sprite) and not obj.image.isNull():
 
-                    obj_tranform = QTransform()
-                    obj_tranform.translate(obj.posX + layer.posX, obj.posY + layer.posY)
-                    obj_tranform.translate(obj.rotationPointX, obj.rotationPointY)
-                    obj_tranform.rotate(obj.rotation)
-                    obj_tranform.translate(-obj.rotationPointX, -obj.rotationPointY)
+                    obj_transform = QTransform()
+                    obj_transform.translate(obj.pos_x + layer.pos_x, obj.pos_y + layer.pos_y)
+                    obj_transform.translate(obj.rotation_point_x, obj.rotation_point_y)
+                    obj_transform.rotate(obj.rotation)
+                    obj_transform.translate(-obj.rotation_point_x, -obj.rotation_point_y)
 
-                    painter.setTransform(obj_tranform)
-                    painter.drawPixmap(0,0,obj.image)
-                
+                    painter.setTransform(obj_transform)
+                    painter.drawPixmap(0, 0, obj.image)
+
                 elif isinstance(obj, Text):
                     painter.setFont(obj.font)
                     painter.setPen(obj.color)
-                    painter.drawText(int(obj.posX),int(obj.posY), obj.text)
+                    painter.drawText(int(obj.pos_x), int(obj.pos_y), obj.text)
 
                 elif obj.image.isNull():
                     raise Exception(f"\nBild {obj.name} >> {obj.image} konnte nicht geladen werden\n")
 
-                
             painter.restore()
         painter.end()
 
+
 class Music(QObject):
+    """Spielt Hintergrundmusik ab."""
     def __init__(self, file_path, volume=0.5):
         super().__init__()
-        self.audio_ouput = QAudioOutput()
+        self.audio_output = QAudioOutput()
         self.music = QMediaPlayer()
-        self.music.setAudioOutput(self.audio_ouput)
+        self.music.setAudioOutput(self.audio_output)
         self.music.setSource(QUrl.fromLocalFile(file_path))
-        self.audio_ouput.setVolume(volume)
+        self.audio_output.setVolume(volume)
 
     def play(self, loop=True):
+        """Startet die Wiedergabe, optional als Endlosschleife."""
         if loop:
             self.music.setLoops(QMediaPlayer.Loops.Infinite)
         self.music.play()
 
     def stop(self):
+        """Stoppt die Wiedergabe."""
         self.music.stop()
 
-class Timer(QObject):
-    timerUpdated = pyqtSignal(float)
 
-    def __init__(self,):
+class Timer(QObject):
+    """Stoppuhr zum Messen von Zeitabständen im Spiel."""
+    timer_updated = pyqtSignal(float)
+
+    def __init__(self):
         super().__init__()
-        """Erstellt eine Stopuhr"""
         self.elapsed_timer = QElapsedTimer()
         self.running = False
 
     def start(self):
+        """Startet die Stoppuhr."""
         if not self.running:
             self.elapsed_timer.start()
             self.running = True
 
     def pause(self):
+        """Pausiert die Stoppuhr."""
         self.running = False
 
     def reset(self):
+        """Setzt die Stoppuhr zurück."""
         self.elapsed_timer.start()
 
-    def getTime(self):
-        """Gibt die zeit der Stopuhr aus"""
+    def get_time(self):
+        """Gibt die aktuelle Zeit der Stoppuhr in Millisekunden zurück."""
         if self.running:
             return self.elapsed_timer.elapsed()
         return 0.0
-    
