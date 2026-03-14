@@ -1,3 +1,27 @@
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "gdpython"
+version = "0.1.2"
+requires-python = ">=3.14"
+description = "GDPython ist eine QT6/Python basierte Game Engine für die einfache Erstellung von 2D-Spielen."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Michael Lutz", email = "michel.lutz92@gmail.com" }
+]
+dependencies = [
+    "PyQt6>=6.10.2",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/Michael0992/GDPython"
