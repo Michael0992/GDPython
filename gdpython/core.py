@@ -86,6 +86,16 @@ class InputHandler(QObject):
         super().__init__()
         self.scene:Scene = scene
 
+    def connect_canvas(self, canvas: "Canvas"):
+        """Verbindet den InputHandler mit dem Canvas für Maus-Tracking."""
+        canvas.setMouseTracking(True)
+        canvas.mouseMoveEvent = self._mouse_move_event
+
+    def _mouse_move_event(self, event):
+        """Speichert die aktuelle Mausposition in der Szene."""
+        self.scene.mouse_x = event.position().x()
+        self.scene.mouse_y = event.position().y()
+
     def key_press_event(self, event):
         """Wird aufgerufen, wenn eine Taste gedrückt wird."""
         key = self.key_to_string(event.key())
@@ -151,12 +161,6 @@ class Canvas(QWidget):
         super().__init__()
         self.scene:Scene = scene
         self.scene.scene_updated.connect(self.update)
-        self.setMouseTracking(True)
-
-    def mouseMoveEvent(self, event):
-        """Speichert die aktuelle Mausposition in der Szene."""
-        self.scene.mouse_x = event.position().x()
-        self.scene.mouse_y = event.position().y()
 
     def paintEvent(self, event):
         painter = QPainter(self)

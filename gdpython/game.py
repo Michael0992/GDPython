@@ -11,6 +11,14 @@ class Game():
         self.game_window = RenderManager(self.scene, self.input_handler)
         self.game_window.setWindowTitle(title)
 
+        self.input_handler.connect_canvas(self.game_window.canvas)
+
+        if hasattr(self, "start"):
+            self.start()
+
+        self.game_loop()
+        sys.exit(self.app.exec())
+
         if hasattr(self, "start"):
             self.start()
         
