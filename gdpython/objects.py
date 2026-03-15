@@ -4,6 +4,8 @@ from PyQt6.QtMultimedia import QSoundEffect
 from typing import List
 import math
 
+#Konstanten
+DEBUG = False
 
 class GameObject:
 
@@ -78,6 +80,10 @@ class GameObject:
             return self.pos_x + layer.pos_x, self.pos_y + layer.pos_y
         else:
             return self.pos_x, self.pos_y
+        
+    def render (self, painter, layer_transform):
+        """Wird von Kindklassen überschrieben, um sich selbst zu rendern."""
+        pass
 
 
 class Sprite(GameObject):
@@ -93,6 +99,7 @@ class Sprite(GameObject):
         self.collidable = collidable
         
         self.animation_timer.timeout.connect(self._update_animation)
+        
     @property
     def size_x(self):
         return self.image.width()
@@ -149,6 +156,28 @@ class Sprite(GameObject):
             self.pos_y + self.size_y > other.pos_y
         )
 
+    def render(self, painter, layer_transform):
+        """Zeichnet das Sprite mit korrekter Rotation."""
+        if self.image.isNull():
+            raise Exception(f"\nBild {self.name} >> {self.image} konnte nicht geladen werden\n")
+
+        from PyQt6.QtGui import QTransform
+        obj_transform = QTransform()
+        obj_transform.translate(self.pos_x + layer_transform.dx(), self.pos_y + layer_transform.dy())
+        obj_transform.translate(self.rotation_point_x, self.rotation_point_y)
+        obj_transform.rotate(self.rotation)
+        obj_transform.translate(-self.rotation_point_x, -self.rotation_point_y)
+        painter.setTransform(obj_transform)
+        painter.drawPixmap(0, 0, self.image)
+
+        if DEBUG and self.collidable:
+            painter.save()
+            debug_transform = QTransform()
+            debug_transform.translate(layer_transform.dx(), layer_transform.dy())
+            painter.setTransform(debug_transform)
+            painter.setPen(QColor("#00FF00"))
+            painter.drawRect(int(self.pos_x), int(self.pos_y), self.size_x, self.size_y)
+            painter.restore()
 
 class Camera(GameObject):
     def __init__(self, name, pos_x, pos_y, scene_width=800, scene_height=800, layer=None):
@@ -214,6 +243,12 @@ class Text(GameObject):
         if self.scene:
             self.scene.update_scene()
 
+    def render(self, painter, layer_transform):
+        """Zeichnet den Text."""
+        painter.setTransform(layer_transform)
+        painter.setFont(self.font)
+        painter.setPen(self.color)
+        painter.drawText(int(self.pos_x), int(self.pos_y), self.text)
 
 class Sound(GameObject):
     def __init__(self, name, file_path, pos_x=0, pos_y=0, volume=0.5):

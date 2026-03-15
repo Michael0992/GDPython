@@ -2,11 +2,7 @@ from PyQt6.QtWidgets import QMainWindow, QWidget
 from PyQt6.QtGui import QPainter, QColor, QTransform
 from PyQt6.QtCore import QObject, pyqtSignal, Qt, QUrl, QElapsedTimer
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from .objects import Layer, Camera, Sprite, Text
-
-#Konstanten
-DEBUG = False
-
+from .objects import Layer, Camera
 
 class Scene(QObject):
 
@@ -163,7 +159,6 @@ class Canvas(QWidget):
         self.scene.mouse_y = event.position().y()
 
     def paintEvent(self, event):
-        """Zeichnet alle Layer und Objekte der Szene."""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(self.scene.background))
 
@@ -175,36 +170,10 @@ class Canvas(QWidget):
             painter.setTransform(transform)
 
             for obj in sorted(layer.objects, key=lambda x: x.z_index):
-                if isinstance(obj, Sprite) and not obj.image.isNull():
-
-                    obj_transform = QTransform()
-                    obj_transform.translate(obj.pos_x + layer.pos_x, obj.pos_y + layer.pos_y)
-                    obj_transform.translate(obj.rotation_point_x, obj.rotation_point_y)
-                    obj_transform.rotate(obj.rotation)
-                    obj_transform.translate(-obj.rotation_point_x, -obj.rotation_point_y)
-
-                    painter.setTransform(obj_transform)
-                    painter.drawPixmap(0, 0, obj.image)
-
-                    # Debug: Kollisionsbox anzeigen
-                    if DEBUG and obj.collidable:
-                        painter.save()
-                        debug_transform = QTransform()
-                        debug_transform.translate(layer.pos_x, layer.pos_y)
-                        painter.setTransform(debug_transform)
-                        painter.setPen(QColor("#00FF00"))
-                        painter.drawRect(int(obj.pos_x), int(obj.pos_y), obj.size_x, obj.size_y)
-                        painter.restore()
-
-                elif isinstance(obj, Text):
-                    painter.setFont(obj.font)
-                    painter.setPen(obj.color)
-                    painter.drawText(int(obj.pos_x), int(obj.pos_y), obj.text)
-
-                elif obj.image.isNull():
-                    raise Exception(f"\nBild {obj.name} >> {obj.image} konnte nicht geladen werden\n")
+                obj.render(painter, transform)
 
             painter.restore()
+
         painter.end()
 
 
