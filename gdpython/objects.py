@@ -1,11 +1,11 @@
-from PyQt6.QtGui import QPixmap, QColor, QFont
+from PyQt6.QtGui import QPixmap, QColor, QFont, QTransform
 from PyQt6.QtCore import QTimer, QUrl
 from PyQt6.QtMultimedia import QSoundEffect
 from typing import List
 import math
 
 #Konstanten
-DEBUG = False
+DEBUG = True
 
 class GameObject:
 
@@ -87,7 +87,9 @@ class GameObject:
 
 
 class Sprite(GameObject):
-    def __init__(self, name:str, pos_x:int, pos_y:int, z_index:int = 0, collidable:bool = False):
+    def __init__(self, name:str, pos_x:int, pos_y:int, z_index:int = 0, collidable:bool = False,
+                hitbox_offset_x:int = 0, hitbox_offset_y:int = 0,
+                hitbox_width:int = None, hitbox_height:int = None):
         super().__init__(name, pos_x, pos_y, z_index)
         
         self.image = QPixmap()
@@ -97,6 +99,11 @@ class Sprite(GameObject):
         self.animation_timer = QTimer()
         self.current_frame = 0
         self.collidable = collidable
+
+        self.hitbox_offset_x = hitbox_offset_x
+        self.hitbox_offset_y = hitbox_offset_y
+        self._hitbox_width = hitbox_width
+        self._hitbox_height = hitbox_height
         
         self.animation_timer.timeout.connect(self._update_animation)
         
@@ -107,6 +114,14 @@ class Sprite(GameObject):
     @property
     def size_y(self):
         return self.image.height()
+    
+    @property
+    def hitbox_width(self):
+        return self._hitbox_width if self._hitbox_width is not None else self.size_x
+
+    @property
+    def hitbox_height(self):
+        return self._hitbox_height if self._hitbox_height is not None else self.size_y
     
     def add_animation(self, name, paths, loop=True, time_between=100):
         """Füge eine Animation hinzu."""
@@ -146,29 +161,29 @@ class Sprite(GameObject):
             self.image = QPixmap(frames[self.current_frame])
 
     def check_collision(self, other:"Sprite") -> bool:
-        """Prüft, ob sich die Collision-Boxes dieses Sprites und eines anderen überschneiden."""
         if not self.collidable or not isinstance(other, Sprite) or not other.collidable:
             return False
+        ax = self.pos_x + self.hitbox_offset_x
+        ay = self.pos_y + self.hitbox_offset_y
+        bx = other.pos_x + other.hitbox_offset_x
+        by = other.pos_y + other.hitbox_offset_y
         return (
-            self.pos_x < other.pos_x + other.size_x and
-            self.pos_x + self.size_x > other.pos_x and
-            self.pos_y < other.pos_y + other.size_y and
-            self.pos_y + self.size_y > other.pos_y
+            ax < bx + other.hitbox_width and
+            ax + self.hitbox_width > bx and
+            ay < by + other.hitbox_height and
+            ay + self.hitbox_height > by
         )
 
     def render(self, painter, layer_transform):
         """Zeichnet das Sprite mit korrekter Rotation."""
-        if self.image.isNull():
-            raise Exception(f"\nBild {self.name} >> {self.image} konnte nicht geladen werden\n")
-
-        from PyQt6.QtGui import QTransform
-        obj_transform = QTransform()
-        obj_transform.translate(self.pos_x + layer_transform.dx(), self.pos_y + layer_transform.dy())
-        obj_transform.translate(self.rotation_point_x, self.rotation_point_y)
-        obj_transform.rotate(self.rotation)
-        obj_transform.translate(-self.rotation_point_x, -self.rotation_point_y)
-        painter.setTransform(obj_transform)
-        painter.drawPixmap(0, 0, self.image)
+        if not self.image.isNull():
+            obj_transform = QTransform()
+            obj_transform.translate(self.pos_x + layer_transform.dx(), self.pos_y + layer_transform.dy())
+            obj_transform.translate(self.rotation_point_x, self.rotation_point_y)
+            obj_transform.rotate(self.rotation)
+            obj_transform.translate(-self.rotation_point_x, -self.rotation_point_y)
+            painter.setTransform(obj_transform)
+            painter.drawPixmap(0, 0, self.image)
 
         if DEBUG and self.collidable:
             painter.save()
@@ -176,7 +191,12 @@ class Sprite(GameObject):
             debug_transform.translate(layer_transform.dx(), layer_transform.dy())
             painter.setTransform(debug_transform)
             painter.setPen(QColor("#00FF00"))
-            painter.drawRect(int(self.pos_x), int(self.pos_y), self.size_x, self.size_y)
+            painter.drawRect(
+                int(self.pos_x + self.hitbox_offset_x),
+                int(self.pos_y + self.hitbox_offset_y),
+                self.hitbox_width,
+                self.hitbox_height
+            )
             painter.restore()
 
 class Camera(GameObject):
