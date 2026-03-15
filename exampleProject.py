@@ -44,7 +44,7 @@ class MeinSpiel(Game):
         for i in range(ASTEROID_COUNT):
             astero = Sprite(f"astero{i}", 0, 0, 0, collidable=True)
             astero.add_animation("0", ["rsc/asteroid7"], False, 0)
-            
+
             while astero.get_distance_to_position(self.ship.pos_x, self.ship.pos_y) < ASTEROID_MIN_SPAWN_DISTANCE:
                 astero.pos_x = random.randint(-ASTEROID_SPAWN_RANGE, ASTEROID_SPAWN_RANGE)
                 astero.pos_y = random.randint(-ASTEROID_SPAWN_RANGE, ASTEROID_SPAWN_RANGE)
@@ -54,8 +54,25 @@ class MeinSpiel(Game):
             astero.rotation = random.randint(0, 359)
             self.scene.default_layer.add_object(astero)
 
-        self.explosion = Sprite("explosion", 0, 0, 10)
-        self.explosion.add_animation("0", [
+        self.explosion_sound = Sound("explosionSound", "rsc/Explosion.wav", volume=0.01)
+
+        self.scene_timer = Timer()
+        self.scene_timer.start()
+
+        self.shoot_interval = Timer()
+        self.shoot_interval.start()
+
+    def update(self):
+        self._update_asteroids()
+        self._update_ship()
+        self._update_bullets()
+        self._cleanup_explosions()
+        self._handle_shoot_input()
+        self._check_win_conditions()
+
+    def _spawn_explosion(self, x, y):
+        exp = Sprite(f"explosion{self.scene_timer.get_time()}", x, y, 10)
+        exp.add_animation("0", [
             "rsc/Explosion8",
             "rsc/Explosion7",
             "rsc/Explosion6",
@@ -65,93 +82,85 @@ class MeinSpiel(Game):
             "rsc/Explosion2",
             "rsc/Explosion",
         ], loop=False, time_between=EXPLOSION_FRAME_DELAY)
+        exp.object_group.append("explosion")
+        exp.play_animation("0")
+        self.scene.default_layer.add_object(exp)
+        self.explosion_sound.play()
 
-        self.explosion_sound = Sound("explosionSound", "rsc/Explosion.wav", volume=0.2)
+    def _update_asteroids(self):
+        ship = self.scene.default_layer.get_object_by_name("ship")
+        for obj in list(self.scene.default_layer.objects):
+            if "astero" not in obj.object_group:
+                continue
+            obj.rotation += obj.object_var["speed_rot"]
+            if ship:
+                obj.move_toward_position(self.ship.pos_x, self.ship.pos_y,
+                                         obj.object_var["speed_move"])
+                if obj.check_collision(self.ship):
+                    self._spawn_explosion(obj.pos_x, obj.pos_y)
+                    self.scene.default_layer.delete_objects("ship")
+            self._check_bullet_collisions(obj)
 
-        self.scene_timer = Timer()
-        self.scene_timer.start()
+    def _check_bullet_collisions(self, asteroid):
+        for obj in list(self.scene.default_layer.objects):
+            if "bullet" not in obj.object_group:
+                continue
+            if obj.check_collision(asteroid):
+                self._spawn_explosion(obj.pos_x, obj.pos_y)
+                self.scene.default_layer.delete_objects(obj.name)
+                self.scene.default_layer.delete_objects(asteroid.name)
+                self.mypoints += POINTS_PER_ASTEROID
+                self.points.set_text(f"Points:{self.mypoints}")
 
-        self.shoot_interval = Timer()
-        self.shoot_interval.start()
-
-    def update(self):
-        for astero in self.scene.default_layer.objects:
-            astero: Sprite
-            bullet: Sprite
-            if "astero" in astero.object_group:
-                astero.rotation += astero.object_var["speed_rot"]
-                if self.scene.default_layer.get_object_by_name("ship") is not None:
-                    astero.move_toward_position(self.ship.pos_x, self.ship.pos_y, astero.object_var["speed_move"])
-                    if astero.check_collision(self.ship):
-                        self.scene.default_layer.delete_objects("ship")
-                        self.explosion.pos_x = astero.pos_x
-                        self.explosion.pos_y = astero.pos_y
-                        self.explosion.object_group.append("explosion")
-                        self.scene.default_layer.add_object(self.explosion)
-                        self.explosion.play_animation("0")
-                        self.explosion_sound.play()
-
-                for bullet in self.scene.default_layer.objects:
-                    if "bullet" in bullet.object_group:
-                        if bullet.check_collision(astero):
-                            explosion = Sprite(f"explosion{self.scene_timer.get_time()}", bullet.pos_x, bullet.pos_y, 10)
-                            explosion.add_animation("0", [
-                                "rsc/Explosion8",
-                                "rsc/Explosion7",
-                                "rsc/Explosion6",
-                                "rsc/Explosion5",
-                                "rsc/Explosion4",
-                                "rsc/Explosion3",
-                                "rsc/Explosion2",
-                                "rsc/Explosion",
-                            ], loop=False, time_between=EXPLOSION_FRAME_DELAY)
-                            self.scene.default_layer.add_object(explosion)
-                            explosion.object_group.append("explosion")
-                            explosion.play_animation("0")
-                            self.scene.default_layer.delete_objects(bullet.name)
-                            self.scene.default_layer.delete_objects(astero.name)
-                            self.mypoints += POINTS_PER_ASTEROID
-                            self.points.set_text(f"Points:{self.mypoints}")
-                            self.explosion_sound.play()
-
-        if self.scene.default_layer.get_object_by_name("ship") is not None:
-            self.ship.move_toward_angle(self.ship.rotation, SHIP_SPEED)
-            self.ship.rotate_toward_position(
-                self.scene.mouse_x - self.scene.default_layer.pos_x,
-                self.scene.mouse_y - self.scene.default_layer.pos_y,
-                SHIP_ROTATION_SPEED
-            )
-
-        for explosion in self.scene.default_layer.objects:
-            explosion: Sprite
-            if "explosion" in explosion.object_group:
-                if explosion.current_frame == len(explosion.current_animation["paths"]) - 1:
-                    self.scene.default_layer.delete_objects(explosion.name)
-
-        for bullet in self.scene.default_layer.objects:
-            if "bullet" in bullet.object_group:
-                bullet.move_toward_angle(bullet.object_var["rot"], BULLET_SPEED)
-
+    def _update_ship(self):
+        if self.scene.default_layer.get_object_by_name("ship") is None:
+            return
+        self.ship.move_toward_angle(self.ship.rotation, SHIP_SPEED)
+        self.ship.rotate_toward_position(
+            self.scene.mouse_x - self.scene.default_layer.pos_x,
+            self.scene.mouse_y - self.scene.default_layer.pos_y,
+            SHIP_ROTATION_SPEED
+        )
         self.scene.default_camera.pos_x = self.ship.pos_x
         self.scene.default_camera.pos_y = self.ship.pos_y
 
-        if self.scene.is_key_pressed("space") and self.shoot_interval.get_time() > SHOOT_COOLDOWN and self.scene.default_layer.get_object_by_name("ship") is not None:
-            bullet = Sprite(f"bullet{self.scene_timer.get_time()}", self.ship.pos_x, self.ship.pos_y, 0, collidable=True)
-            bullet.add_animation("0", ["rsc/Bullet.png"], loop=False, time_between=0)
-            bullet.object_var = {"rot": self.ship.rotation}
-            bullet.object_group.append("bullet")
-            bullet.play_animation("0")
-            self.scene.default_layer.add_object(bullet)
-            self.shoot_interval.reset()
+    def _update_bullets(self):
+        for obj in list(self.scene.default_layer.objects):
+            if "bullet" in obj.object_group:
+                obj.move_toward_angle(obj.object_var["rot"], BULLET_SPEED)
 
-        if self.mypoints == WIN_SCORE:
+    def _cleanup_explosions(self):
+        for obj in list(self.scene.default_layer.objects):
+            if "explosion" in obj.object_group:
+                if obj.current_frame == len(obj.current_animation["paths"]) - 1:
+                    self.scene.default_layer.delete_objects(obj.name)
+
+    def _handle_shoot_input(self):
+        if not self.scene.is_key_pressed("space"):
+            return
+        if self.shoot_interval.get_time() <= SHOOT_COOLDOWN:
+            return
+        if self.scene.default_layer.get_object_by_name("ship") is None:
+            return
+        bullet = Sprite(f"bullet{self.scene_timer.get_time()}",
+                        self.ship.pos_x, self.ship.pos_y, 0, collidable=True)
+        bullet.add_animation("0", ["rsc/Bullet.png"], loop=False, time_between=0)
+        bullet.object_var = {"rot": self.ship.rotation}
+        bullet.object_group.append("bullet")
+        bullet.play_animation("0")
+        self.scene.default_layer.add_object(bullet)
+        self.shoot_interval.reset()
+
+    def _check_win_conditions(self):
+        if self.mypoints >= WIN_SCORE:
             scene2 = Scene("Win", size_x=SCREEN_WIDTH, size_y=SCREEN_HEIGHT, background="#000000")
-            scene2.default_layer.add_object(Text("YouWin", -170, 0, 0, text="You Win", font_size=60, color="#ffff00"))
+            scene2.default_layer.add_object(
+                Text("YouWin", -170, 0, 0, text="You Win", font_size=60, color="#ffff00"))
             self.game_window.change_scene(scene2)
-
         if self.scene.default_layer.get_object_by_name("ship") is None:
             scene3 = Scene("GameOver", size_x=SCREEN_WIDTH, size_y=SCREEN_HEIGHT, background="#000000")
-            scene3.default_layer.add_object(Text("gameOver", -190, 0, 0, text="Game Over", font_size=60, color="#ff0000"))
+            scene3.default_layer.add_object(
+                Text("gameOver", -190, 0, 0, text="Game Over", font_size=60, color="#ff0000"))
             self.game_window.change_scene(scene3)
 
 
