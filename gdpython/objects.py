@@ -5,7 +5,7 @@ from typing import List
 import math
 
 
-class Objects:
+class GameObject:
 
     def __init__(self, name:str, pos_x:int, pos_y:int, z_index:int = 0):
         self.name = name
@@ -80,20 +80,27 @@ class Objects:
             return self.pos_x, self.pos_y
 
 
-class Sprite(Objects):
-    def __init__(self, name:str, pos_x:int, pos_y:int, z_index:int = 0, size_x:int = 0, size_y:int = 0):
+class Sprite(GameObject):
+    def __init__(self, name:str, pos_x:int, pos_y:int, z_index:int = 0, collidable:bool = False):
         super().__init__(name, pos_x, pos_y, z_index)
-        self.size_x = size_x
-        self.size_y = size_y
+        
         self.image = QPixmap()
         self.animations = {}
         self.current_animation = None
         self.animation_finished = False
         self.animation_timer = QTimer()
         self.current_frame = 0
+        self.collidable = collidable
         
         self.animation_timer.timeout.connect(self._update_animation)
+    @property
+    def size_x(self):
+        return self.image.width()
 
+    @property
+    def size_y(self):
+        return self.image.height()
+    
     def add_animation(self, name, paths, loop=True, time_between=100):
         """Füge eine Animation hinzu."""
         self.animations[name] = {
@@ -103,7 +110,6 @@ class Sprite(Objects):
         }
 
     def play_animation(self, name):
-        """Spiele eine Animation ab."""
         if name in self.animations:
             self.current_animation = self.animations[name]
             self.current_frame = 0
@@ -112,6 +118,8 @@ class Sprite(Objects):
             frames = self.current_animation["paths"]
             if frames:
                 self.image = QPixmap(frames[0])
+                self.rotation_point_x = self.image.width() // 2
+                self.rotation_point_y = self.image.height() // 2
                 self.animation_timer.start(self.current_animation["time_between"])
 
     def _update_animation(self):
@@ -132,7 +140,7 @@ class Sprite(Objects):
 
     def check_collision(self, other:"Sprite") -> bool:
         """Prüft, ob sich die Collision-Boxes dieses Sprites und eines anderen überschneiden."""
-        if not isinstance(other, Sprite):
+        if not self.collidable or not isinstance(other, Sprite) or not other.collidable:
             return False
         return (
             self.pos_x < other.pos_x + other.size_x and
@@ -142,7 +150,7 @@ class Sprite(Objects):
         )
 
 
-class Camera(Objects):
+class Camera(GameObject):
     def __init__(self, name, pos_x, pos_y, scene_width=800, scene_height=800, layer=None):
         super().__init__(name, pos_x, pos_y)
         self.layer = layer
@@ -154,7 +162,7 @@ class Camera(Objects):
         self.layer = layer
 
 
-class Layer(Objects):
+class Layer(GameObject):
 
     def __init__(self, name, pos_x, pos_y, z_index=0):
         super().__init__(name, pos_x, pos_y, z_index)
@@ -181,7 +189,7 @@ class Layer(Objects):
             self.scene.update_scene()
 
 
-class Text(Objects):
+class Text(GameObject):
     def __init__(self, name:str, pos_x, pos_y, z_index=0, text:str="New text", font_family:str="Arial", font_size:int=16, color:str="#FFFFFF"):
         super().__init__(name, pos_x, pos_y, z_index)
         self.text = text
@@ -207,7 +215,7 @@ class Text(Objects):
             self.scene.update_scene()
 
 
-class Sound(Objects):
+class Sound(GameObject):
     def __init__(self, name, file_path, pos_x=0, pos_y=0, volume=0.5):
         super().__init__(name, pos_x, pos_y)
         self.sound = QSoundEffect()
