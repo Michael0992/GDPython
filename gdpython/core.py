@@ -4,6 +4,9 @@ from PyQt6.QtCore import QObject, pyqtSignal, Qt, QUrl, QElapsedTimer
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from .objects import Layer, Camera, Sprite, Text
 
+#Konstanten
+DEBUG = False
+
 
 class Scene(QObject):
 
@@ -69,7 +72,7 @@ class Scene(QObject):
         """Fügt einer Szene einen Layer hinzu."""
         layer.scene = self
         self.layers.append(layer)
-        self.layers.sort(key=lambda l: l.z_index)
+        self.layers.sort(key=lambda layer_item: layer_item.z_index)
         self.update_scene()
 
     def get_object_by_name(self, name:str):
@@ -164,12 +167,13 @@ class Canvas(QWidget):
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(self.scene.background))
 
-        for layer in sorted(self.scene.layers, key=lambda l: l.z_index):
+        for layer in sorted(self.scene.layers, key=lambda layer_item: layer_item.z_index):
             painter.save()
             transform = QTransform()
             transform.translate(layer.pos_x, layer.pos_y)
             transform.rotate(layer.rotation)
             painter.setTransform(transform)
+
             for obj in sorted(layer.objects, key=lambda x: x.z_index):
                 if isinstance(obj, Sprite) and not obj.image.isNull():
 
@@ -181,6 +185,16 @@ class Canvas(QWidget):
 
                     painter.setTransform(obj_transform)
                     painter.drawPixmap(0, 0, obj.image)
+
+                    # Debug: Kollisionsbox anzeigen
+                    if DEBUG and obj.collidable:
+                        painter.save()
+                        debug_transform = QTransform()
+                        debug_transform.translate(layer.pos_x, layer.pos_y)
+                        painter.setTransform(debug_transform)
+                        painter.setPen(QColor("#00FF00"))
+                        painter.drawRect(int(obj.pos_x), int(obj.pos_y), obj.size_x, obj.size_y)
+                        painter.restore()
 
                 elif isinstance(obj, Text):
                     painter.setFont(obj.font)
