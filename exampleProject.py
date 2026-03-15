@@ -36,16 +36,15 @@ class MeinSpiel(Game):
         self.points = Text("points", 30, 50, 0, f"Punkte:{self.mypoints}")
         self.ui.add_object(self.points)
 
-        self.ship = Sprite("ship", 0, 0, 0, 26, 27)
+        self.ship = Sprite("ship", 0, 0, 0, collidable=True)
         self.ship.add_animation("0", ["rsc/ship"], False, 0)
         self.ship.play_animation("0")
         self.scene.default_layer.add_object(self.ship)
 
         for i in range(ASTEROID_COUNT):
-            astero = Sprite(f"astero{i}", 0, 0, 0, 32, 32)
+            astero = Sprite(f"astero{i}", 0, 0, 0, collidable=True)
             astero.add_animation("0", ["rsc/asteroid7"], False, 0)
-            astero.rotation_point_x = 27
-            astero.rotation_point_y = 28
+            
             while astero.get_distance_to_position(self.ship.pos_x, self.ship.pos_y) < ASTEROID_MIN_SPAWN_DISTANCE:
                 astero.pos_x = random.randint(-ASTEROID_SPAWN_RANGE, ASTEROID_SPAWN_RANGE)
                 astero.pos_y = random.randint(-ASTEROID_SPAWN_RANGE, ASTEROID_SPAWN_RANGE)
@@ -137,7 +136,7 @@ class MeinSpiel(Game):
         self.scene.default_camera.pos_y = self.ship.pos_y
 
         if self.scene.is_key_pressed("space") and self.shoot_interval.get_time() > SHOOT_COOLDOWN and self.scene.default_layer.get_object_by_name("ship") is not None:
-            bullet = Sprite(f"bullet{self.scene_timer.get_time()}", self.ship.pos_x, self.ship.pos_y, 0, 10, 10)
+            bullet = Sprite(f"bullet{self.scene_timer.get_time()}", self.ship.pos_x, self.ship.pos_y, 0, collidable=True)
             bullet.add_animation("0", ["rsc/Bullet.png"], loop=False, time_between=0)
             bullet.object_var = {"rot": self.ship.rotation}
             bullet.object_group.append("bullet")
