@@ -118,6 +118,23 @@ class InputHandler(QObject):
             Qt.Key.Key_Space: "space"
         }
         return key_map.get(qtkey, None)
+    
+    def mousePressEvent(self, event):
+        button = self.mouse_to_string(event.button())
+        if button:
+            self.scene.key_pressed.add(button)
+
+    def mouseReleaseEvent(self, event):
+        button = self.mouse_to_string(event.button())
+        if button and button in self.scene.key_pressed:
+            self.scene.key_pressed.remove(button)
+
+    def mouse_to_string(self, qtbutton):
+        button_map = {
+            Qt.MouseButton.LeftButton: "left",
+            Qt.MouseButton.RightButton: "right"
+        }
+        return button_map.get(qtbutton, None)
 
 
 class RenderManager(QMainWindow):
@@ -154,6 +171,11 @@ class RenderManager(QMainWindow):
         new_scene.scene_updated.connect(self.canvas.update)
         self.canvas.update()
 
+    def mousePressEvent(self, event):
+        self.input_handler.mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.input_handler.mouseReleaseEvent(event)
 
 class Canvas(QWidget):
     """Zeichenfläche für die Szene."""
