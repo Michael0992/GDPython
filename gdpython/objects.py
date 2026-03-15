@@ -20,14 +20,14 @@ class Objects:
         self.rotation_point_x = 0
         self.rotation_point_y = 0
 
-    def move_toward_angle(self, angle, distance):
-        """Bewegt ein Objekt in Richtung eines Winkels mit einer Geschwindigkeit von x Pixel pro Sekunde."""
-        radians = math.radians(angle)
-        vx = distance * math.cos(radians)
-        vy = distance * math.sin(radians)
+    def move_toward_angle(self, angle, speed):
+        """Bewegt ein Objekt in Richtung eines Winkels mit einer Geschwindigkeit von x Pixel pro Frame."""
+        angle_radians = math.radians(angle)
+        velocity_x = speed * math.cos(angle_radians)
+        velocity_y = speed * math.sin(angle_radians)
 
-        self.pos_x += vx
-        self.pos_y += vy
+        self.pos_x += velocity_x
+        self.pos_y += velocity_y
 
         if self.scene:
             self.scene.update_scene()
@@ -54,19 +54,23 @@ class Objects:
         if self.scene:
             self.scene.update_scene()
 
-    def move_toward_position(self, x, y, speed):
-        """Bewegt das Objekt schrittweise zur Zielposition."""
-        if self.pos_x < x: self.pos_x += speed
-        if self.pos_x > x: self.pos_x -= speed
-        if self.pos_y < y: self.pos_y += speed
-        if self.pos_y > y: self.pos_y -= speed
+    def move_toward_position(self, target_x, target_y, speed):
+        """Bewegt das Objekt mit der Geschwindigkeit 'speed' (Pixel pro Frame) zur Zielposition."""
+        if self.pos_x < target_x:
+            self.pos_x = min(self.pos_x + speed, target_x)
+        if self.pos_x > target_x:
+            self.pos_x = max(self.pos_x - speed, target_x)
+        if self.pos_y < target_y:
+            self.pos_y = min(self.pos_y + speed, target_y)
+        if self.pos_y > target_y:
+            self.pos_y = max(self.pos_y - speed, target_y)
 
         if self.scene:
             self.scene.update_scene()
 
-    def get_distance_to_position(self, x, y):
+    def get_distance_to_position(self, target_x, target_y):
         """Gibt die Distanz zwischen dem Objekt und einer Position zurück."""
-        return math.sqrt((x - self.pos_x)**2 + (y - self.pos_x)**2)
+        return math.sqrt((target_x - self.pos_x)**2 + (target_y - self.pos_y)**2)
 
     def get_absolute_position(self, layer=None):
         """Gibt die Koordinaten eines Objekts zurück im Verhältnis zu einem Layer."""
@@ -84,11 +88,11 @@ class Sprite(Objects):
         self.image = QPixmap()
         self.animations = {}
         self.current_animation = None
-        self.played = False
+        self.animation_finished = False
         self.animation_timer = QTimer()
         self.current_frame = 0
-        self.scene = None
-        self.animation_timer.timeout.connect(self.update_animation)
+        
+        self.animation_timer.timeout.connect(self._update_animation)
 
     def add_animation(self, name, paths, loop=True, time_between=100):
         """Füge eine Animation hinzu."""
@@ -103,16 +107,16 @@ class Sprite(Objects):
         if name in self.animations:
             self.current_animation = self.animations[name]
             self.current_frame = 0
-            self.played = False
+            self.animation_finished = False
 
             frames = self.current_animation["paths"]
             if frames:
                 self.image = QPixmap(frames[0])
                 self.animation_timer.start(self.current_animation["time_between"])
 
-    def update_animation(self):
+    def _update_animation(self):
         """Aktualisiert das Animations-Frame."""
-        if self.current_animation and not self.played:
+        if self.current_animation and not self.animation_finished:
             frames = self.current_animation["paths"]
 
             if self.current_frame < len(frames) - 1:
@@ -122,7 +126,7 @@ class Sprite(Objects):
                     self.current_frame = 0
                 else:
                     self.animation_timer.stop()
-                    self.played = True
+                    self.animation_finished = True
                     return
             self.image = QPixmap(frames[self.current_frame])
 
