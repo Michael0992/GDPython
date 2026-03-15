@@ -19,12 +19,6 @@ class Game():
         self.game_loop()
         sys.exit(self.app.exec())
 
-        if hasattr(self, "start"):
-            self.start()
-        
-        self.game_loop()
-        sys.exit(self.app.exec())
-
     def game_loop(self):
         if hasattr(self, "update"):
             self.update()
