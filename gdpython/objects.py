@@ -5,7 +5,7 @@ from typing import List
 import math
 
 #Konstanten
-DEBUG = True
+DEBUG = False
 
 class GameObject:
 
