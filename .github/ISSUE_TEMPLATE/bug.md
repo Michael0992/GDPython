@@ -1,7 +1,7 @@
 ---
 name: Bug
 about: Einen Fehler melden
-title: ''
+title: '🪲[Bug]: '
 labels: 'bug'
 assignees: ''
 ---

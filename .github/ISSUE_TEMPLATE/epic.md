@@ -1,7 +1,7 @@
 ---
 name: Epic
 about: Großes Arbeitspaket, das mehrere Issues umfasst
-title: ''
+title: '⚡[Epic]: '
 labels: 'epic'
 assignees: ''
 ---

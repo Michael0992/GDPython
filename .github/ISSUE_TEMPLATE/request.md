@@ -1,7 +1,7 @@
 ---
 name: Request
 about: Allgemeine Anfrage (z.B. Material, Zugang, Information)
-title: ''
+title: '🙏[Request]: '
 labels: 'request'
 assignees: ''
 ---

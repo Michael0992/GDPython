@@ -1,7 +1,7 @@
 ---
 name: Feature
 about: Neue Funktionalität implementieren
-title: ''
+title: '⭐[Feature]: '
 labels: 'feature'
 assignees: ''
 ---
